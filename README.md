@@ -1,47 +1,111 @@
-# مساعد لائحة كلية الذكاء الاصطناعي (نسخة نهائية)
+# مساعد لائحة كلية الذكاء الاصطناعي
 
-مساعد ذكي محلي للإجابة على أسئلة لائحة الكلية باستخدام RAG + Ollama.
+نظام RAG محلي للإجابة على أسئلة لائحة كلية الذكاء الاصطناعي (جامعة كفر الشيخ) بدقة وسرعة، مع عرض مصادر الإجابة بشكل منظم.
 
-## التشغيل السريع
-1. تفعيل البيئة:
+## الفكرة باختصار
+- استرجاع المقاطع الأقرب من بيانات اللائحة (FAISS + TF-IDF + Keyword Boost).
+- توليد إجابة عربية عبر Ollama (محلي) عند توفره.
+- عرض واجهة ويب Flask محسنة مع:
+	- ملخص سريع للإجابة
+	- تنسيق واضح للقوائم والفقرات
+	- مصادر مسترجعة منسقة
+
+## المتطلبات
+- Python 3.13+
+- Ollama مثبت ومحلي (اختياري لكنه يرفع جودة الصياغة)
+- نموذج Ollama:
+	- `qwen2.5:1.5b-instruct`
+
+## التشغيل (Windows)
+### 1) تفعيل البيئة الافتراضية
 ```powershell
 & .\.venv\Scripts\Activate.ps1
 ```
-2. تثبيت المتطلبات:
+
+### 2) تثبيت المتطلبات
 ```powershell
 d:/Downloads/files/.venv/Scripts/python.exe -m pip install -r requirements.txt
 ```
-3. بناء الفهرس من الداتا:
+
+### 3) بناء الفهرس من بيانات اللائحة
 ```powershell
 d:/Downloads/files/.venv/Scripts/python.exe build_clean_index.py
 ```
-4. تشغيل Ollama:
+
+### 4) تشغيل Ollama
 ```powershell
 ollama serve
 ```
-5. تشغيل الواجهة:
+
+### 5) تشغيل الواجهة
 ```powershell
 d:/Downloads/files/.venv/Scripts/python.exe flask_app.py
 ```
 
-الرابط:
+افتح:
 - http://127.0.0.1:5000
 
-## الملفات الأساسية
-- `flask_app.py`: واجهة Flask والمنطق الخاص بالعرض.
-- `rag_system.py`: محرك البحث والتوليد.
-- `build_clean_index.py`: إعادة بناء الفهرس من `data.json`.
-- `templates/index.html`: واجهة HTML.
-- `static/style.css` و`static/app.js`: التنسيق والتفاعلات.
-- `requirements.txt`: الاعتماديات.
+## تشغيل سريع بأمر واحد
+يمكنك استخدام:
+```powershell
+.\run.ps1
+```
 
-## ميزات النسخة الحالية
-- Retrieval محلي (FAISS + TF-IDF).
-- توليد إجابة عربي عبر Ollama (`qwen2.5:1.5b-instruct`).
-- تحسينات سرعة (cache لحالة Ollama + cache للأسئلة المتكررة).
-- تنسيق إجابة ومصادر بشكل منظم.
-- زر `مسح السابق` لمسح النتائج/الكاش.
+## هيكل المشروع
+```
+files/
+├── flask_app.py          # واجهة Flask + منطق العرض
+├── rag_system.py         # محرك RAG (index/search/generation)
+├── build_clean_index.py  # بناء فهرس البحث من data.json
+├── data.json             # بيانات اللائحة
+├── requirements.txt      # الاعتماديات
+├── run.ps1               # سكربت تشغيل سريع
+├── templates/
+│   └── index.html        # قالب الصفحة
+├── static/
+│   ├── style.css         # التصميم
+│   ├── app.js            # تفاعلات الواجهة
+│   └── favicon.svg       # أيقونة
+└── index/
+		├── faiss.index
+		├── vectorizer.pkl
+		└── chunks.json
+```
 
-## ملاحظات
-- المشروع يعمل بالكامل محليًا.
-- بعد تعديل `data.json` شغّل `build_clean_index.py` مرة أخرى.
+## الميزات الحالية
+- بحث دلالي محلي سريع على بيانات اللائحة.
+- فلترة ذكية لأسئلة المواد (المستوى/الفصل).
+- إجابة عربية عبر Ollama عند توفره.
+- Fallback تلقائي لو Ollama غير متاح.
+- Cache للأسئلة المتكررة لتسريع الرد.
+- زر "مسح السابق" لمسح النتائج المخزنة مؤقتًا.
+
+## الأداء
+تم تطبيق تحسينات لتقليل زمن الرد:
+- تقليل السياق المرسل للموديل.
+- تقليل عدد tokens للتوليد.
+- Cache لحالة Ollama.
+- Cache لإجابات الأسئلة المتكررة.
+
+## استكشاف الأخطاء
+### الواجهة لا تفتح
+1. تأكد أن Flask يعمل على 5000.
+2. أعد تشغيل:
+```powershell
+d:/Downloads/files/.venv/Scripts/python.exe flask_app.py
+```
+
+### الرد بطيء
+1. تأكد أن Ollama يعمل.
+2. جرب إعادة نفس السؤال (سيستفيد من الكاش).
+
+### النتائج غير محدثة بعد تعديل data.json
+أعد بناء الفهرس:
+```powershell
+d:/Downloads/files/.venv/Scripts/python.exe build_clean_index.py
+```
+
+## ملاحظات مهمة
+- المشروع Local-first بالكامل.
+- يمكن التشغيل بدون Ollama (Retrieval فقط).
+- يفضل كتابة السؤال بصيغة مباشرة مع كلمات مفتاحية.
