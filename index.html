@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Horizon · المستشار الأكاديمي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060A0F;
+    --surface: #0C1219;
+    --surface2: #111922;
+    --border: rgba(100,220,180,0.12);
+    --border-glow: rgba(100,220,180,0.35);
+    --accent: #3DFFC2;
+    --accent-dim: rgba(61,255,194,0.08);
+    --accent-mid: rgba(61,255,194,0.18);
+    --gold: #C8A96E;
+    --gold-dim: rgba(200,169,110,0.12);
+    --text: #EEF3FF;
+    --text-muted: #6B7A91;
+    --text-dim: #3D4A5C;
+    --user-bg: linear-gradient(135deg, #1a6b52, #0f4d3a);
+    --radius: 18px;
+    --shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: 'Tajawal', sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ═══ CANVAS BACKGROUND ═══ */
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ═══ GRID OVERLAY ═══ */
+  .grid-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(61,255,194,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,255,194,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
+
+  /* ═══ MAIN LAYOUT ═══ */
+  .shell {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ═══ HEADER ═══ */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 64px;
+    background: rgba(6,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--gold), var(--accent), transparent);
+    opacity: 0.5;
+    animation: scanLine 4s linear infinite;
+  }
+
+  @keyframes scanLine {
+    0% { transform: scaleX(0); transform-origin: left; opacity: 0; }
+    30% { transform: scaleX(1); transform-origin: left; opacity: 0.5; }
+    70% { transform: scaleX(1); transform-origin: right; opacity: 0.5; }
+    100% { transform: scaleX(0); transform-origin: right; opacity: 0; }
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .brand-mark svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .brand-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    letter-spacing: 0.5px;
+    background: linear-gradient(120deg, #fff 40%, var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.2;
+  }
+
+  .brand-text span {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    font-weight: 400;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pill-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 40px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+  }
+
+  .pill-badge.status-ok {
+    background: rgba(61,255,194,0.08);
+    border-color: rgba(61,255,194,0.25);
+    color: var(--accent);
+  }
+
+  .pill-badge.status-error {
+    background: rgba(255,80,80,0.08);
+    border-color: rgba(255,80,80,0.25);
+    color: #ff8080;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulseDot 2s infinite;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .btn-new {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 16px;
+    border-radius: 40px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .btn-new:hover {
+    border-color: var(--border-glow);
+    color: var(--accent);
+    background: var(--accent-dim);
+    transform: translateY(-1px);
+  }
+
+  /* ═══ BODY ═══ */
+  .body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ═══ WELCOME ═══ */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 24px;
+    text-align: center;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .welcome.hidden { display: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .welcome-emblem {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 28px;
+    position: relative;
+  }
+
+  .welcome-emblem svg {
+    width: 100%;
+    height: 100%;
+    animation: spinSlow 20s linear infinite;
+  }
+
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .emblem-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    animation: none;
+  }
+
+  .welcome h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #fff 30%, var(--accent) 70%, var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 10px;
+  }
+
+  .welcome p {
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    max-width: 420px;
+    line-height: 1.7;
+    margin-bottom: 36px;
+  }
+
+  .examples-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 600px;
+    width: 100%;
+  }
+
+  .ex-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: right;
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ex-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-dim), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .ex-card:hover::before { opacity: 1; }
+
+  .ex-card:hover {
+    border-color: var(--border-glow);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 12px 30px rgba(61,255,194,0.1);
+  }
+
+  .ex-icon {
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .ex-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    display: block;
+    line-height: 1.5;
+  }
+
+  /* ═══ MESSAGES ═══ */
+  .msgs-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 8px;
+    scroll-behavior: smooth;
+  }
+
+  .msgs-scroll.hidden { display: none; }
+
+  .msgs-scroll::-webkit-scrollbar { width: 4px; }
+  .msgs-scroll::-webkit-scrollbar-track { background: transparent; }
+  .msgs-scroll::-webkit-scrollbar-thumb { background: rgba(61,255,194,0.2); border-radius: 10px; }
+
+  .msgs-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .msg-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    animation: msgIn 0.35s cubic-bezier(0.34,1.4,0.64,1) both;
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .msg-row.user .avatar {
+    background: linear-gradient(135deg, #1a6b52, #0f4d3a);
+    border-color: rgba(61,255,194,0.3);
+  }
+
+  .msg-row.bot .avatar {
+    background: var(--surface2);
+    border-color: var(--border-glow);
+    box-shadow: 0 0 12px rgba(61,255,194,0.15);
+  }
+
+  .bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-width: 68%;
+  }
+
+  .bubble {
+    padding: 13px 18px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    font-weight: 400;
+    word-break: break-word;
+  }
+
+  .msg-row.user .bubble {
+    background: var(--user-bg);
+    color: #d4f5ec;
+    border-bottom-left-radius: 5px;
+    border: 1px solid rgba(61,255,194,0.2);
+  }
+
+  .msg-row.bot .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-right-radius: 5px;
+    color: var(--text);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* ═══ FORMATTED CONTENT ═══ */
+  .msg-row.bot .bubble ul, 
+  .msg-row.bot .bubble ol {
+    margin: 10px 0;
+    padding-right: 20px;
+  }
+
+  .msg-row.bot .bubble li {
+    margin: 6px 0;
+    line-height: 1.6;
+  }
+
+  .msg-row.bot .bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.85rem;
+  }
+
+  .msg-row.bot .bubble table th,
+  .msg-row.bot .bubble table td {
+    border: 1px solid rgba(61,255,194,0.15);
+    padding: 8px 6px;
+    text-align: right;
+  }
+
+  .msg-row.bot .bubble table th {
+    background: rgba(61,255,194,0.08);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .msg-row.bot .bubble strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .msg-row.bot .bubble code {
+    background: rgba(61,255,194,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: var(--accent);
+    font-size: 0.9em;
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 6px;
+    flex-direction: row-reverse;
+  }
+
+  .sim-badge {
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 30px;
+    background: var(--gold-dim);
+    border: 1px solid rgba(200,169,110,0.25);
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  /* ═══ TYPING ═══ */
+  .typing-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    animation: msgIn 0.3s ease both;
+  }
+
+  .typing-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border-glow);
+    border-radius: 20px;
+    border-bottom-right-radius: 5px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 20px rgba(61,255,194,0.08);
+  }
+
+  .dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .dots span {
+    display: block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: dotBounce 1.3s infinite ease-in-out;
+  }
+
+  .dots span:nth-child(2) { animation-delay: 0.16s; }
+  .dots span:nth-child(3) { animation-delay: 0.32s; }
+
+  @keyframes dotBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-7px); opacity: 1; }
+  }
+
+  .typing-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* ═══ INPUT ═══ */
+  .input-zone {
+    padding: 14px 20px 20px;
+    background: linear-gradient(to top, rgba(6,10,15,0.98) 70%, transparent);
+    flex-shrink: 0;
+  }
+
+  .input-pill {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 6px 6px 6px 18px;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .input-pill:focus-within {
+    border-color: var(--border-glow);
+    box-shadow: 0 0 0 3px rgba(61,255,194,0.07), 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  .input-pill input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 0.93rem;
+    font-weight: 400;
+    color: var(--text);
+    padding: 10px 0;
+    direction: rtl;
+  }
+
+  .input-pill input::placeholder {
+    color: var(--text-dim);
+  }
+
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #1dc99a);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    color: #030a07;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(61,255,194,0.3);
+  }
+
+  .send-btn:hover:not(:disabled) {
+    transform: scale(1.12);
+    box-shadow: 0 6px 24px rgba(61,255,194,0.5);
+  }
+
+  .send-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .send-btn svg {
+    width: 18px;
+    height: 18px;
+    transform: scaleX(-1);
+  }
+
+  /* ═══ DECORATIVE LINE AT BOTTOM ═══ */
+  .footer-line {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    padding-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ═══ RESPONSIVE ═══ */
+  @media (max-width: 640px) {
+    .examples-grid { grid-template-columns: 1fr; }
+    .bubble-wrap { max-width: 82%; }
+    .welcome h2 { font-size: 1.5rem; }
+    .header { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="grid-overlay"></div>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="20,2 38,11 38,29 20,38 2,29 2,11" stroke="rgba(61,255,194,0.4)" stroke-width="1" fill="rgba(61,255,194,0.04)"/>
+          <polygon points="20,7 33,13.5 33,26.5 20,33 7,26.5 7,13.5" stroke="rgba(200,169,110,0.35)" stroke-width="0.8" fill="none"/>
+          <circle cx="20" cy="20" r="5" fill="none" stroke="#3DFFC2" stroke-width="1.2"/>
+          <circle cx="20" cy="20" r="2" fill="#3DFFC2"/>
+          <line x1="20" y1="7" x2="20" y2="14" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+          <line x1="20" y1="26" x2="20" y2="33" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+          <line x1="7" y1="13.5" x2="14" y2="17.5" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+          <line x1="26" y1="22.5" x2="33" y2="26.5" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+          <line x1="33" y1="13.5" x2="26" y2="17.5" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+          <line x1="14" y1="22.5" x2="7" y2="26.5" stroke="rgba(61,255,194,0.5)" stroke-width="0.8"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>AI Horizon</h1>
+        <span>كلية الذكاء الاصطناعي · جامعة كفر الشيخ</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="pill-badge status-ok" id="statusBadge">
+        <div class="pulse-dot"></div>
+        <span id="statusText">جاري التحقق...</span>
+      </div>
+      <button class="btn-new" id="clearBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M12 3l9 9-9 9"/></svg>
+        جديد
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- WELCOME -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-emblem">
+        <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="45,4 86,24.5 86,65.5 45,86 4,65.5 4,24.5" stroke="rgba(61,255,194,0.25)" stroke-width="1"/>
+          <polygon points="45,12 78,29 78,61 45,78 12,61 12,29" stroke="rgba(200,169,110,0.2)" stroke-width="0.8"/>
+          <circle cx="45" cy="45" r="20" stroke="rgba(61,255,194,0.2)" stroke-width="0.8" stroke-dasharray="3 4"/>
+        </svg>
+        <div class="emblem-center">🎓</div>
+      </div>
+      <h2>المستشار الأكاديمي</h2>
+      <p>نظام ذكاء اصطناعي متخصص في اللوائح والقوانين الأكاديمية لكلية الذكاء الاصطناعي</p>
+      <div class="examples-grid">
+        <div class="ex-card" data-q="ما هي متطلبات التخرج لبرنامج الذكاء الاصطناعي؟">
+          <span class="ex-icon">📜</span>
+          <span class="ex-label">متطلبات التخرج</span>
+        </div>
+        <div class="ex-card" data-q="كم عدد الساعات المعتمدة المطلوبة للتخرج؟">
+          <span class="ex-icon">⏱️</span>
+          <span class="ex-label">الساعات المعتمدة</span>
+        </div>
+        <div class="ex-card" data-q="ما هي سياسة الغياب والإنذارات الأكاديمية؟">
+          <span class="ex-icon">📋</span>
+          <span class="ex-label">سياسة الغياب</span>
+        </div>
+        <div class="ex-card" data-q="كيف يتم احتساب المعدل التراكمي GPA؟">
+          <span class="ex-icon">📊</span>
+          <span class="ex-label">احتساب المعدل</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="msgs-scroll hidden" id="msgsScroll">
+      <div class="msgs-inner" id="msgsInner"></div>
+    </div>
+
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-zone">
+    <div class="input-pill">
+      <input type="text" id="input" placeholder="اسأل عن أي شيء أكاديمي..." autocomplete="off" disabled>
+      <button class="send-btn" id="sendBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="footer-line">AI Horizon · نظام المستشار الأكاديمي الذكي</div>
+  </div>
+
+</div>
+
+<!-- BACKGROUND CANVAS SCRIPT -->
+<script>
+// ═══ PARTICLE CANVAS ═══
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], nodes = [], frame = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Floating particles
+for(let i=0; i<55; i++) {
+  particles.push({
+    x: Math.random()*1920,
+    y: Math.random()*1080,
+    vx: (Math.random()-0.5)*0.3,
+    vy: (Math.random()-0.5)*0.3,
+    r: Math.random()*1.5+0.3,
+    a: Math.random(),
+    phase: Math.random()*Math.PI*2
+  });
+}
+
+// Neural nodes
+for(let i=0; i<18; i++) {
+  nodes.push({
+    x: Math.random()*1920,
+    y: Math.random()*1080,
+    vx: (Math.random()-0.5)*0.15,
+    vy: (Math.random()-0.5)*0.15
+  });
+}
+
+function drawFrame() {
+  ctx.clearRect(0, 0, W, H);
+  frame++;
+  
+  // Update + draw nodes (neural net)
+  nodes.forEach(n => {
+    n.x += n.vx; n.y += n.vy;
+    if(n.x<0||n.x>W) n.vx*=-1;
+    if(n.y<0||n.y>H) n.vy*=-1;
+  });
+  
+  // Draw connections
+  for(let i=0; i<nodes.length; i++) {
+    for(let j=i+1; j<nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist < 220) {
+        const a = (1 - dist/220) * 0.08;
+        ctx.strokeStyle = `rgba(61,255,194,${a})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+  
+  // Draw node dots
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(61,255,194,0.25)';
+    ctx.fill();
+  });
+
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if(p.x<0) p.x=W; if(p.x>W) p.x=0;
+    if(p.y<0) p.y=H; if(p.y>H) p.y=0;
+    const flicker = 0.3 + 0.5 * Math.sin(frame*0.02 + p.phase);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(200,169,110,${flicker*0.35})`;
+    ctx.fill();
+  });
+
+  requestAnimationFrame(drawFrame);
+}
+drawFrame();
+
+// ═══ CHAT LOGIC ═══
+const welcome = document.getElementById('welcome');
+const msgsScroll = document.getElementById('msgsScroll');
+const msgsInner = document.getElementById('msgsInner');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearBtn');
+const statusBadge = document.getElementById('statusBadge');
+const statusText = document.getElementById('statusText');
+
+let active = false, busy = false;
+
+function setStatus(text, ok=true) {
+  statusText.textContent = text;
+  statusBadge.className = 'pill-badge ' + (ok ? 'status-ok' : 'status-error');
+  const dot = statusBadge.querySelector('.pulse-dot');
+  if(dot) dot.style.background = ok ? 'var(--accent)' : '#ff8080';
+}
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/collection-info');
+    const d = await r.json();
+    if(d.success) {
+      setStatus(`نشط · ${d.document_count||'∞'} مستند`, true);
+    } else {
+      setStatus('قاعدة البيانات غير مكتملة', false);
+    }
+  } catch {
+    setStatus('خارج الشبكة', false);
+  }
+  inputEl.disabled = false;
+  sendBtn.disabled = false;
+}
+
+function showChat() {
+  if(!active) {
+    active = true;
+    welcome.classList.add('hidden');
+    msgsScroll.classList.remove('hidden');
+  }
+}
+
+function addMsg(text, who, sim=0) {
+  const row = document.createElement('div');
+  row.className = `msg-row ${who}`;
+  
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = who==='user' ? '👤' : '🧠';
+  
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap';
+  
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  
+  // عرض النص مع الحفاظ على التنسيق
+  if (who === 'bot') {
+    // للإجابات من Bot، احفظ التنسيق
+    bub.style.whiteSpace = 'pre-wrap';
+    bub.style.wordWrap = 'break-word';
+    bub.style.overflowWrap = 'break-word';
+  }
+  
+  bub.textContent = text;
+  wrap.appendChild(bub);
+  
+  if(who==='bot' && sim>0) {
+    const br = document.createElement('div');
+    br.className = 'badge-row';
+    const b = document.createElement('div');
+    b.className = 'sim-badge';
+    b.textContent = `تطابق ${sim}%`;
+    br.appendChild(b);
+    wrap.appendChild(br);
+  }
+  
+  row.appendChild(av);
+  row.appendChild(wrap);
+  msgsInner.appendChild(row);
+  msgsScroll.scrollTo({ top: msgsScroll.scrollHeight, behavior: 'smooth' });
+}
+
+function addTyping() {
+  const row = document.createElement('div');
+  row.className = 'typing-row';
+  row.id = 'typing';
+  
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = '🧠';
+  av.style.borderColor = 'var(--border-glow)';
+  av.style.boxShadow = '0 0 12px rgba(61,255,194,0.2)';
+  
+  const bub = document.createElement('div');
+  bub.className = 'typing-bubble';
+  bub.innerHTML = `<div class="dots"><span></span><span></span><span></span></div><span class="typing-label">يحلل استفساركم...</span>`;
+  
+  row.appendChild(av);
+  row.appendChild(bub);
+  msgsInner.appendChild(row);
+  msgsScroll.scrollTo({ top: msgsScroll.scrollHeight, behavior: 'smooth' });
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if(t) t.remove();
+}
+
+async function send() {
+  const q = inputEl.value.trim();
+  if(!q || busy) return;
+  showChat();
+  addMsg(q, 'user');
+  inputEl.value = '';
+  busy = true;
+  sendBtn.disabled = true;
+  addTyping();
+  
+  try {
+    const r = await fetch('/api/ask', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({question: q})
+    });
+    const d = await r.json();
+    removeTyping();
+    if(d.success) {
+      let sim = 0;
+      if(d.sources?.length) {
+        sim = Math.round(d.sources.reduce((s,x)=>s+(x.relevance||0),0)/d.sources.length*100);
+      }
+      addMsg(d.answer, 'bot', sim);
+    } else {
+      addMsg('⚠️ ' + (d.error||'حدث خطأ'), 'bot');
+    }
+  } catch {
+    removeTyping();
+    addMsg('❌ فشل الاتصال بالخادم. تحقق من الشبكة.', 'bot');
+  } finally {
+    busy = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', send);
+inputEl.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); }});
+clearBtn.addEventListener('click', () => {
+  if(busy) return;
+  msgsInner.innerHTML = '';
+  active = false;
+  welcome.classList.remove('hidden');
+  msgsScroll.classList.add('hidden');
+  inputEl.value = '';
+  inputEl.focus();
+  setStatus('جلسة جديدة ·  جاهز', true);
+});
+
+document.querySelectorAll('.ex-card').forEach(c => {
+  c.addEventListener('click', () => {
+    const q = c.dataset.q;
+    if(q) { inputEl.value = q; send(); }
+  });
+});
+
+window.addEventListener('load', checkStatus);
+</script>
+</body>
+</html>

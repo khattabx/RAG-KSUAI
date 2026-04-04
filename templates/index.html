@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مساعد لائحة الكلية</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="blob blob-a"></div>
+  <div class="blob blob-b"></div>
+
+  <main class="shell">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="hero-badge">مساعدك الذكي في اللائحه </div>
+        <div class="status-row">
+          <span class="status {{ 'ok' if ollama_running else 'off' }}">
+            {{ 'Ollama متصل' if ollama_running else 'Ollama غير متصل' }}
+          </span>
+          <span class="status model">{{ model_name }}</span>
+        </div>
+      </div>
+
+      <h1>مساعد لائحة كلية الذكاء الاصطناعي</h1>
+      <p>إجابات دقيقة وسريعة عن القبول، الساعات، التخرج، الخطة الدراسية، واللوائح الأكاديمية</p>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <strong>وضع التشغيل</strong>
+          <span>{{ 'AI + Retrieval' if ollama_running else 'Retrieval Only' }}</span>
+        </div>
+        <div class="metric-card">
+          <strong>مصدر الإجابة</strong>
+          <span>مواد ولائحة الكلية</span>
+        </div>
+        <div class="metric-card">
+          <strong>نوع البحث</strong>
+          <span>Hybrid TF-IDF + Keywords</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="panel ask-panel">
+      <form method="post" id="ask-form">
+        <label for="query">اكتب سؤالك</label>
+        <div class="query-row">
+          <input id="query" name="query" type="text" placeholder="مثال: ما شروط مرتبة الشرف؟" value="{{ query }}" required>
+          <button type="submit">اسأل الآن</button>
+          <a class="btn-secondary" href="{{ url_for('clear_history') }}">مسح السابق</a>
+        </div>
+      </form>
+
+      <div class="suggested-head compact">
+        <h3>أسئلة سريعة</h3>
+      </div>
+
+      <div class="chips compact">
+        {% for grp in suggested_questions %}
+          {% for q in grp[1][:2] %}
+          <button type="button" class="chip" data-q="{{ q }}">{{ q }}</button>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel tips-panel">
+      <h3>دليل سؤال سريع</h3>
+      <div class="tips-grid">
+        <article>
+          <strong>حدد المستوى والفصل</strong>
+          <span>مثال: مواد المستوى الثاني - الفصل الأول</span>
+        </article>
+        <article>
+          <strong>اذكر كلمة مفتاحية واضحة</strong>
+          <span>مثل: الإنذار، التخرج، النجاح، التسجيل</span>
+        </article>
+        <article>
+          <strong>اسأل بصيغة مباشرة</strong>
+          <span>أمثلة: ما شروط...؟ كم عدد...؟ متى...؟</span>
+        </article>
+      </div>
+    </section>
+
+    {% if error %}
+    <section class="panel error-panel">{{ error }}</section>
+    {% endif %}
+
+    {% if answer %}
+    <section class="panel answer-panel" id="answer-panel">
+      <div class="panel-head">
+        <h2>الإجابة</h2>
+        <div class="answer-actions">
+          <span class="mode {{ mode }}">{{ 'AI' if mode == 'ollama' else 'Search' }}</span>
+          <button type="button" class="copy-answer">نسخ الإجابة</button>
+        </div>
+      </div>
+      {% if answer_preview %}
+      <div class="answer-preview">
+        <span>ملخص سريع</span>
+        <p>{{ answer_preview }}</p>
+      </div>
+      {% endif %}
+      <div class="answer-rich" id="answer-block">{{ answer_html|safe }}</div>
+    </section>
+
+    <section class="panel sources-panel">
+      <h3>المصادر المسترجعة</h3>
+      <div class="sources-list">
+        {% for src in rendered_sources %}
+        <article class="source-card">
+          <div class="source-meta">
+            <span class="score">تطابق: {{ src.score_text }}</span>
+            <span class="title">{{ src.title }}</span>
+          </div>
+          <div class="source-tags">
+            {% if src.type %}<span>{{ src.type }}</span>{% endif %}
+            {% if src.category %}<span>{{ src.category }}</span>{% endif %}
+            {% if src.level %}<span>L{{ src.level }}</span>{% endif %}
+            {% if src.semester %}<span>S{{ src.semester }}</span>{% endif %}
+          </div>
+          <div class="source-snippet">{{ src.snippet_html|safe }}</div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
