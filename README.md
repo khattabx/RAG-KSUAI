@@ -3,6 +3,7 @@
 Local Arabic-first RAG assistant for Faculty of AI regulations and staff information at Kafr El-Sheikh University. The project is designed for transparent, source-grounded answers with optional local LLM phrasing.
 
 ![preveiw](assets/image.png)
+
 ## Value Proposition
 
 1. Fast, local retrieval over official faculty data.
